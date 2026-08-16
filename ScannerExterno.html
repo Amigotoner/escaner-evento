@@ -311,7 +311,11 @@ function validarLocal(token){
     titulo: pagado?'✅ Acceso autorizado':'⚠️ Pago pendiente',
     nombre: pase.nombre,
     sub: (res.lugar||'') + (pagado?' · Entregar pulsera':' · Cobrar $'+(res.saldo||0)),
-    alerta: 'Modo sin conexión: se sincronizará al recuperar señal.'
+    alerta: pagado
+      ? 'Modo sin conexión: se sincronizará al recuperar señal.'
+      : 'SIN CONEXIÓN: el sistema no puede registrar el cobro ahora mismo. ' +
+        'Cobra el efectivo tú mismo antes de dejarla pasar, y anótalo en papel — ' +
+        'se sincronizará cuando regrese la señal, pero el pago hay que anotarlo aparte.'
   });
   reanudar(3500);
 }
