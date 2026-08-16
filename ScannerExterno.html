@@ -295,6 +295,10 @@ function validarLocal(token){
     pintar({color:'rojo', titulo:'⛔ Pase anulado', sub:''});
     return reanudar(3500);
   }
+  if(pase.estado==='DENTRO'){
+    pintar({color:'rojo', titulo:'⛔ Este pase ya ingresó', sub:'Según los últimos datos descargados (sin conexión).'});
+    return reanudar(4500);
+  }
   var res = CACHE.reservas[pase.reserva] || {};
   var pagado = res.estatusPago === 'PAGADO';
 
