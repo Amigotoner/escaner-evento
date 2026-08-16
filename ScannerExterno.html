@@ -180,14 +180,26 @@ if (!API_URL || API_URL.indexOf('PEGA_AQUI') >= 0) {
    ==========================================================================
    Esta página vive fuera de Apps Script (por eso puede usar la cámara sin
    el bloqueo del iframe), así que en vez de google.script.run usamos fetch()
-   normal. El backend (_manejarApiEscaner en 03_Pagos.gs) reenvía cada
-   "accion" a la misma función que ya usa el escáner interno.
+   normal. El backend (_manejarApiEscaner, llamado desde doGet en
+   06_Web_Admin.gs) reenvía cada "accion" a la misma función que ya usa el
+   escáner interno.
+
+   Usamos GET (parámetros en la URL), no POST: las apps web de Apps Script
+   responden con una redirección 302 antes de ejecutar el código, y los
+   navegadores descartan el cuerpo de una petición POST al seguir esa
+   redirección — el PIN "llegaba vacío" del otro lado. Con GET no hay
+   cuerpo que perder: la URL completa viaja intacta a través de la
+   redirección.
 */
 function llamarApi(accion, datos){
-  return fetch(API_URL, {
-    method: 'POST',
-    body: JSON.stringify(Object.assign({accion: accion}, datos || {}))
-  }).then(function(r){
+  var payload = Object.assign({p: 'api', accion: accion}, datos || {});
+  var qs = Object.keys(payload).map(function(k){
+    var v = payload[k];
+    if (v === undefined || v === null) v = '';
+    if (typeof v === 'object') v = JSON.stringify(v);
+    return encodeURIComponent(k) + '=' + encodeURIComponent(v);
+  }).join('&');
+  return fetch(API_URL + '?' + qs).then(function(r){
     if (!r.ok) throw new Error('HTTP ' + r.status);
     return r.json();
   });
