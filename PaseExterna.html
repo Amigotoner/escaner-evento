@@ -56,7 +56,6 @@
   <div class="cargando" id="cargando">Cargando tu acceso…</div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script>
 /* Pega aquí la URL de tu aplicación web de Apps Script, terminada en /exec. */
 var API_URL = 'https://script.google.com/macros/s/AKfycbx47wiWLThmArQIirAXMtA6xAytZphK8q0sQ0fnOQmCqUz5WCBwe700pizTMOp-vD2K/exec';
@@ -149,39 +148,97 @@ function mostrarPase(D){
     var boton = this;
     boton.disabled = true;
     boton.textContent = 'Generando imagen...';
-    html2canvas(document.getElementById('card'), {
-      backgroundColor: '#ffffff',
-      scale: 2,
-      ignoreElements: function(el){ return el.id === 'btnDescargarQR' || el.id === 'avisoConfig'; }
-    }).then(function(canvas){
-      canvas.toBlob(function(blob){
-        var url = URL.createObjectURL(blob);
-        var a = document.createElement('a');
-        a.href = url;
-        a.download = 'acceso-' + D.paseID + '.png';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+
+    var img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = function(){
+      try {
+        dibujarYDescargar(img, D, boton);
+      } catch (e) {
         boton.disabled = false;
         boton.textContent = 'Descargar código QR';
-      });
-    }).catch(function(){
+        alert('No se pudo generar la imagen. Mantén presionado el QR de arriba para guardarlo.');
+      }
+    };
+    img.onerror = function(){
       boton.disabled = false;
       boton.textContent = 'Descargar código QR';
-      // Respaldo: al menos el QR solo, si la captura de la tarjeta completa falla
-      if (qrUrl.indexOf('data:') === 0) {
-        var a2 = document.createElement('a');
-        a2.href = qrUrl;
-        a2.download = 'acceso-' + D.paseID + '.png';
-        document.body.appendChild(a2);
-        a2.click();
-        document.body.removeChild(a2);
-      } else {
-        window.open(qrUrl, '_blank');
-      }
-    });
+      alert('No se pudo generar la imagen. Mantén presionado el QR de arriba para guardarlo.');
+    };
+    img.src = qrUrl;
   });
+
+  /**
+   * Dibuja la tarjeta a mano en un <canvas> (texto + imagen del QR ya
+   * cargada) en vez de "fotografiar" el DOM con una librería — esto es lo
+   * que finalmente funciona: html2canvas fallaba en capturar el QR tanto
+   * dentro de Apps Script como fuera, en GitHub Pages, así que el problema
+   * era de la librería, no del entorno. Dibujar directamente con la API
+   * de canvas es una ruta de código distinta y mucho más confiable.
+   */
+  function dibujarYDescargar(imgQR, D, boton){
+    var W = 640, PAD = 56;
+    var color = D.colorPrincipal || '#0f172a';
+    var canvas = document.createElement('canvas');
+    var ctx = canvas.getContext('2d');
+    var y = PAD;
+
+    // Altura total calculada de antemano, según lo que vamos a dibujar
+    var qrSize = 460;
+    var H = PAD + 24 + 34 + 22 + 18 + qrSize + 40 + 30 + 20 + 60 + PAD;
+    canvas.width = W;
+    canvas.height = H;
+
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, W, H);
+    ctx.textAlign = 'center';
+
+    ctx.fillStyle = '#64748b';
+    ctx.font = '700 14px -apple-system, Segoe UI, Roboto, sans-serif';
+    ctx.fillText(String(D.evento || '').toUpperCase(), W/2, y); y += 34;
+
+    ctx.fillStyle = color;
+    ctx.font = '700 27px -apple-system, Segoe UI, Roboto, sans-serif';
+    ctx.fillText('Acceso personal', W/2, y); y += 26;
+
+    ctx.fillStyle = '#64748b';
+    ctx.font = '400 15px -apple-system, Segoe UI, Roboto, sans-serif';
+    ctx.fillText(D.fecha + ' · ' + D.hora + ' h', W/2, y); y += 20;
+    ctx.fillText(String(D.lugarEvento || ''), W/2, y); y += 32;
+
+    // QR con marco
+    var qrX = (W - qrSize) / 2;
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(qrX - 1, y - 1, qrSize + 2, qrSize + 2);
+    ctx.drawImage(imgQR, qrX, y, qrSize, qrSize);
+    y += qrSize + 40;
+
+    ctx.fillStyle = '#0f172a';
+    ctx.font = '700 23px -apple-system, Segoe UI, Roboto, sans-serif';
+    ctx.fillText(String(D.nombre || ''), W/2, y); y += 26;
+
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '400 13px ui-monospace, Menlo, monospace';
+    ctx.fillText(String(D.paseID || ''), W/2, y); y += 34;
+
+    ctx.fillStyle = '#334155';
+    ctx.font = '600 15px -apple-system, Segoe UI, Roboto, sans-serif';
+    ctx.fillText((D.ubicacion || '') + '  ·  ' + (D.estatusPago || ''), W/2, y);
+
+    canvas.toBlob(function(blob){
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'acceso-' + D.paseID + '.png';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      boton.disabled = false;
+      boton.textContent = 'Descargar código QR';
+    });
+  }
 
   if('wakeLock' in navigator){
     navigator.wakeLock.request('screen').catch(function(){});
