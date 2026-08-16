@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Check-in</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    background:#0f172a;color:#f1f5f9;min-height:100vh;padding:14px;
+    -webkit-user-select:none;user-select:none
+  }
+  .wrap{max-width:480px;margin:0 auto}
+  .barra{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;font-size:13px}
+  .barra .quien{color:#94a3b8}
+  .conex{padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700}
+  .online{background:#166534;color:#bbf7d0}
+  .offline{background:#7c2d12;color:#fed7aa}
+  #lector{width:100%;border-radius:12px;overflow:hidden;background:#000;margin-bottom:12px}
+  .panel{
+    border-radius:14px;padding:20px;min-height:180px;
+    display:flex;flex-direction:column;justify-content:center;gap:7px;text-align:center
+  }
+  .idle{background:#1e293b;color:#94a3b8}
+  .verde{background:#15803d;color:#fff}
+  .azul{background:#1d4ed8;color:#fff}
+  .ambar{background:#b45309;color:#fff}
+  .rojo{background:#b91c1c;color:#fff}
+  .titulo{font-size:24px;font-weight:800;letter-spacing:-.02em;line-height:1.15}
+  .nombre{font-size:20px;font-weight:700}
+  .sub{font-size:15px;opacity:.95;line-height:1.4}
+  .chip{
+    display:inline-block;background:rgba(255,255,255,.18);padding:5px 12px;
+    border-radius:20px;font-size:13px;font-weight:700;margin:3px 3px 0
+  }
+  .alerta{
+    background:#fef3c7;color:#78350f;padding:11px 13px;border-radius:9px;
+    font-size:13px;font-weight:600;margin-top:11px;text-align:left;line-height:1.45
+  }
+  button{
+    width:100%;padding:15px;border:0;border-radius:10px;font-size:16px;font-weight:700;
+    cursor:pointer;font-family:inherit;margin-top:9px
+  }
+  .bPrim{background:#f1f5f9;color:#0f172a}
+  .bSec{background:#334155;color:#f1f5f9}
+  .bVerde{background:#16a34a;color:#fff}
+  input{
+    width:100%;padding:14px;border:0;border-radius:10px;font-size:17px;
+    font-family:inherit;background:#1e293b;color:#f1f5f9;margin-bottom:9px
+  }
+  input::placeholder{color:#64748b}
+  .login{max-width:340px;margin:70px auto;text-align:center}
+  .login h1{font-size:22px;margin-bottom:6px}
+  .login p{color:#94a3b8;font-size:14px;margin-bottom:22px}
+  .oculto{display:none}
+  .stats{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px;
+    background:#1e293b;border-radius:11px;padding:13px
+  }
+  .stat{text-align:center}
+  .stat b{display:block;font-size:20px;font-weight:800}
+  .stat span{font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:.04em}
+  .resultado{
+    background:#1e293b;border-radius:9px;padding:12px;margin-bottom:8px;
+    display:flex;justify-content:space-between;align-items:center;gap:10px;cursor:pointer
+  }
+  .resultado b{font-size:14.5px}
+  .resultado small{color:#94a3b8;font-size:12px;display:block}
+  .modal{
+    position:fixed;inset:0;background:rgba(15,23,42,.94);display:flex;align-items:center;
+    justify-content:center;padding:20px;z-index:100
+  }
+  .modal.oculto{display:none}
+  .modal .caja{background:#1e293b;border-radius:14px;padding:22px;max-width:400px;width:100%}
+  .modal h3{font-size:18px;margin-bottom:10px}
+  .modal p{font-size:14px;color:#cbd5e1;margin-bottom:14px;line-height:1.5}
+  .tabs{display:flex;gap:7px;margin-bottom:12px}
+  .tab{
+    flex:1;padding:10px;text-align:center;background:#1e293b;border-radius:9px;
+    font-size:13.5px;font-weight:700;cursor:pointer;color:#94a3b8
+  }
+  .tab.act{background:#f1f5f9;color:#0f172a}
+  .avisoConfig{
+    background:#7c2d12;color:#fed7aa;padding:13px 15px;border-radius:9px;font-size:13px;
+    margin-bottom:14px;line-height:1.5
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div id="avisoConfig" class="avisoConfig oculto">
+    ⚠️ Falta configurar la URL del sistema en este archivo (constante <b>API_URL</b>, al inicio del
+    &lt;script&gt;). Pega ahí la URL de tu aplicación web de Apps Script terminada en <code>/exec</code>.
+  </div>
+
+  <!-- LOGIN -->
+  <div id="login" class="login">
+    <h1>🎟️ Check-in</h1>
+    <p>Ingresa tu PIN de colaborador</p>
+    <input id="pin" type="tel" inputmode="numeric" placeholder="••••" maxlength="6"
+           style="text-align:center;font-size:26px;letter-spacing:.3em">
+    <button class="bPrim" id="btnEntrar">Entrar</button>
+    <div id="errPin" style="color:#fca5a5;font-size:13px;margin-top:11px"></div>
+  </div>
+
+  <!-- APP -->
+  <div id="app" class="oculto">
+    <div class="barra">
+      <div class="quien" id="quien"></div>
+      <div class="conex online" id="conex">EN LÍNEA</div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab act" data-tab="escanear">Escanear</div>
+      <div class="tab" data-tab="buscar">Buscar</div>
+    </div>
+
+    <div id="tabEscanear">
+      <div id="lector"></div>
+      <div id="panel" class="panel idle">
+        <div class="sub">Apunta la cámara al código QR</div>
+      </div>
+      <div id="acciones"></div>
+      <div class="stats">
+        <div class="stat"><b id="stDentro">0</b><span>Dentro</span></div>
+        <div class="stat"><b id="stTotal">0</b><span>Ingresos</span></div>
+        <div class="stat"><b id="stCola">0</b><span>Sin sincr.</span></div>
+      </div>
+    </div>
+
+    <div id="tabBuscar" class="oculto">
+      <input id="qBuscar" type="text" placeholder="Nombre, ID de pase o reservación">
+      <button class="bPrim" id="btnBuscar">Buscar</button>
+      <div id="resBusqueda" style="margin-top:12px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DE COBRO -->
+<div id="modalCobro" class="modal oculto">
+  <div class="caja">
+    <h3 id="mcTitulo">Cobro en efectivo</h3>
+    <p id="mcTexto"></p>
+    <input id="mcMonto" type="number" inputmode="decimal" step="0.01">
+    <button class="bVerde" id="mcConfirmar">Confirmar cobro</button>
+    <button class="bSec" id="mcCancelar">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL DE AUTORIZACIÓN -->
+<div id="modalAuth" class="modal oculto">
+  <div class="caja">
+    <h3>Autorizar sin pago</h3>
+    <p>Esta acción queda registrada en la bitácora con tu nombre. Escribe el motivo.</p>
+    <input id="maMotivo" type="text" placeholder="Ej: invitado del organizador">
+    <button class="bPrim" id="maConfirmar">Autorizar acceso</button>
+    <button class="bSec" id="maCancelar">Cancelar</button>
+  </div>
+</div>
+
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script>
+/* ==========================================================================
+   CONFIGURACIÓN — lo único que hay que editar en este archivo
+   ==========================================================================
+   Pega aquí la URL de tu aplicación web de Apps Script (Implementar > Nueva
+   implementación > Aplicación web), terminada en /exec. Es la misma URL que
+   usas para Reserva, Scanner y Admin, SIN "?p=..." al final.
+*/
+var API_URL = 'https://script.google.com/macros/s/AKfycbx47wiWLThmArQIirAXMtA6xAytZphK8q0sQ0fnOQmCqUz5WCBwe700pizTMOp-vD2K/exec';
+
+if (!API_URL || API_URL.indexOf('PEGA_AQUI') >= 0) {
+  document.getElementById('avisoConfig').classList.remove('oculto');
+}
+
+/* ==========================================================================
+   PUENTE CON APPS SCRIPT
+   ==========================================================================
+   Esta página vive fuera de Apps Script (por eso puede usar la cámara sin
+   el bloqueo del iframe), así que en vez de google.script.run usamos fetch()
+   normal. El backend (_manejarApiEscaner en 03_Pagos.gs) reenvía cada
+   "accion" a la misma función que ya usa el escáner interno.
+*/
+function llamarApi(accion, datos){
+  return fetch(API_URL, {
+    method: 'POST',
+    body: JSON.stringify(Object.assign({accion: accion}, datos || {}))
+  }).then(function(r){
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  });
+}
+
+var SES = null;      // sesión del colaborador
+var CACHE = null;    // caché de pases para modo offline
+var COLA = [];       // escaneos pendientes de sincronizar
+var scanner = null;
+var ocupado = false;
+var ultimoResultado = null;
+var DISPOSITIVO = (navigator.userAgent.indexOf('iPhone')>=0?'iPhone':
+                   navigator.userAgent.indexOf('Android')>=0?'Android':'Otro');
+
+// ============ LOGIN ============
+document.getElementById('btnEntrar').addEventListener('click', entrar);
+document.getElementById('pin').addEventListener('keypress', function(e){ if(e.key==='Enter') entrar(); });
+
+function entrar(){
+  var pin = document.getElementById('pin').value.trim();
+  if(!pin) return;
+  var err = document.getElementById('errPin');
+  err.textContent = 'Verificando...';
+  llamarApi('login', {pin: pin}).then(function(r){
+    if(!r.ok){ err.textContent = r.mensaje; return; }
+    SES = r;
+    document.getElementById('login').classList.add('oculto');
+    document.getElementById('app').classList.remove('oculto');
+    document.getElementById('quien').textContent = r.nombre + ' · ' + r.rol;
+    descargarCache();
+    iniciarScanner();
+  }).catch(function(e){ err.textContent = 'Error de conexión.'; });
+}
+
+// ============ CACHÉ OFFLINE ============
+function descargarCache(){
+  llamarApi('cache', {staffID: SES.staffID}).then(function(c){
+    if(c && c.ok){ CACHE = c; actualizarStats(); }
+  }).catch(function(){});
+}
+
+function actualizarStats(){
+  if(!CACHE) return;
+  var dentro = CACHE.pases.filter(function(p){return p.estado==='DENTRO'}).length;
+  var total = CACHE.pases.filter(function(p){return p.entradas>0}).length;
+  document.getElementById('stDentro').textContent = dentro;
+  document.getElementById('stTotal').textContent = total;
+  document.getElementById('stCola').textContent = COLA.length;
+}
+
+function marcarConexion(online){
+  var el = document.getElementById('conex');
+  el.className = 'conex ' + (online?'online':'offline');
+  el.textContent = online ? 'EN LÍNEA' : 'SIN CONEXIÓN';
+}
+
+// ============ SCANNER ============
+function iniciarScanner(){
+  scanner = new Html5Qrcode('lector');
+  scanner.start({facingMode:'environment'}, {fps:10, qrbox:{width:240,height:240}}, alEscanear)
+    .catch(function(e){
+      document.getElementById('panel').className='panel rojo';
+      document.getElementById('panel').innerHTML='<div class="sub">No se pudo abrir la cámara.<br>'+e+'</div>';
+    });
+}
+
+function alEscanear(texto){
+  if(ocupado) return;
+  ocupado = true;
+  if(scanner) scanner.pause(true);
+  pintar({color:'idle', titulo:'Validando...', sub:''});
+
+  llamarApi('escanear', {token: texto, staffID: SES.staffID, dispositivo: DISPOSITIVO})
+    .then(function(r){ marcarConexion(true); mostrar(r); })
+    .catch(function(e){ marcarConexion(false); validarLocal(texto); });
+}
+
+// --- Validación local cuando no hay conexión ---
+function validarLocal(token){
+  if(!CACHE){
+    pintar({color:'rojo', titulo:'⚠️ Sin conexión', sub:'No hay datos locales. Usa la lista impresa.'});
+    return reanudar(3500);
+  }
+  var paseID = String(token).split('.')[0];
+  var pase = null;
+  for(var i=0;i<CACHE.pases.length;i++){ if(CACHE.pases[i].id===paseID){ pase=CACHE.pases[i]; break; } }
+
+  if(!pase){
+    pintar({color:'rojo', titulo:'⛔ Pase no encontrado', sub:'Verifica con administración.'});
+    return reanudar(3500);
+  }
+  if(pase.estado==='ANULADO'){
+    pintar({color:'rojo', titulo:'⛔ Pase anulado', sub:''});
+    return reanudar(3500);
+  }
+  var res = CACHE.reservas[pase.reserva] || {};
+  var pagado = res.estatusPago === 'PAGADO';
+
+  COLA.push({token:token, ts:Date.now(), dispositivo:DISPOSITIVO});
+  pase.estado='DENTRO'; pase.entradas++;
+  actualizarStats();
+
+  pintar({
+    color: pagado?'verde':'ambar',
+    titulo: pagado?'✅ Acceso autorizado':'⚠️ Pago pendiente',
+    nombre: pase.nombre,
+    sub: (res.lugar||'') + (pagado?' · Entregar pulsera':' · Cobrar $'+(res.saldo||0)),
+    alerta: 'Modo sin conexión: se sincronizará al recuperar señal.'
+  });
+  reanudar(3500);
+}
+
+// ============ RESULTADO ============
+function mostrar(r){
+  ultimoResultado = r;
+  pintar({
+    color: r.color || 'rojo',
+    titulo: r.titulo || '',
+    nombre: r.nombre || '',
+    sub: r.mensaje || '',
+    chips: chipsDe(r),
+    alerta: r.alerta
+  });
+
+  var acc = document.getElementById('acciones');
+  acc.innerHTML = '';
+
+  if(r.accion === 'COBRAR_EFECTIVO'){
+    var b1 = document.createElement('button');
+    b1.className='bVerde'; b1.textContent='💵 Registrar cobro de $'+fmt(r.montoACobrar);
+    b1.onclick = function(){ abrirCobro(r); };
+    acc.appendChild(b1);
+
+    var b2 = document.createElement('button');
+    b2.className='bSec'; b2.textContent='Autorizar sin pago';
+    b2.onclick = function(){ abrirAuth(r); };
+    acc.appendChild(b2);
+
+    var b3 = document.createElement('button');
+    b3.className='bSec'; b3.textContent='Continuar escaneando';
+    b3.onclick = function(){ acc.innerHTML=''; reanudar(0); };
+    acc.appendChild(b3);
+    return; // no reanuda solo: espera decisión de caja
+  }
+
+  if(CACHE && r.paseID){
+    for(var i=0;i<CACHE.pases.length;i++){
+      if(CACHE.pases[i].id===r.paseID){
+        CACHE.pases[i].estado = (r.resultado==='SALIDA') ? 'FUERA' : 'DENTRO';
+        if(r.resultado==='ENTRADA') CACHE.pases[i].entradas++;
+        break;
+      }
+    }
+    actualizarStats();
+  }
+  reanudar(r.color==='rojo' ? 4500 : 2600);
+}
+
+function chipsDe(r){
+  var c=[];
+  if(r.lugar) c.push(r.lugar);
+  if(r.estatusPago) c.push('Pago: '+r.estatusPago);
+  if(r.metodoPago) c.push(r.metodoPago);
+  if(r.entradasPrevias>0) c.push('Ingresos previos: '+r.entradasPrevias);
+  return c;
+}
+
+function pintar(o){
+  var p = document.getElementById('panel');
+  p.className = 'panel ' + (o.color||'idle');
+  var h = '';
+  if(o.titulo) h += '<div class="titulo">'+o.titulo+'</div>';
+  if(o.nombre) h += '<div class="nombre">'+o.nombre+'</div>';
+  if(o.sub) h += '<div class="sub">'+o.sub+'</div>';
+  if(o.chips && o.chips.length){
+    h += '<div>'+o.chips.map(function(c){return '<span class="chip">'+c+'</span>'}).join('')+'</div>';
+  }
+  if(o.alerta) h += '<div class="alerta">⚠️ '+o.alerta+'</div>';
+  p.innerHTML = h;
+}
+
+function reanudar(ms){
+  setTimeout(function(){
+    pintar({color:'idle', sub:'Apunta la cámara al código QR'});
+    document.getElementById('acciones').innerHTML='';
+    ocupado = false;
+    if(scanner) { try{ scanner.resume(); }catch(e){} }
+    if(COLA.length) sincronizar();
+  }, ms);
+}
+
+// ============ COBRO EN EFECTIVO ============
+function abrirCobro(r){
+  document.getElementById('mcTexto').textContent =
+    r.nombre + ' — Reservación ' + r.reservaID + ' · Saldo ' + fmt(r.montoACobrar);
+  document.getElementById('mcMonto').value = r.montoACobrar;
+  document.getElementById('modalCobro').classList.remove('oculto');
+}
+
+document.getElementById('mcCancelar').onclick = function(){
+  document.getElementById('modalCobro').classList.add('oculto');
+};
+
+document.getElementById('mcConfirmar').onclick = function(){
+  var monto = Number(document.getElementById('mcMonto').value);
+  var btn = this;
+  btn.disabled = true; btn.textContent='Registrando...';
+  llamarApi('cobrar', {reservaID: ultimoResultado.reservaID, monto: monto, staffID: SES.staffID})
+    .then(function(res){
+      btn.disabled=false; btn.textContent='Confirmar cobro';
+      document.getElementById('modalCobro').classList.add('oculto');
+      if(!res.ok){ alert(res.mensaje); return; }
+      pintar({
+        color: res.estatusPago==='PAGADO' ? 'verde' : 'ambar',
+        titulo: res.estatusPago==='PAGADO' ? '✅ Pago registrado' : '⚠️ Abono registrado',
+        nombre: ultimoResultado ? ultimoResultado.nombre : '',
+        sub: res.mensaje
+      });
+      document.getElementById('acciones').innerHTML='';
+      reanudar(2800);
+    }).catch(function(){
+      btn.disabled=false; btn.textContent='Confirmar cobro';
+      alert('Sin conexión. Anota el cobro en papel y regístralo después.');
+    });
+};
+
+// ============ AUTORIZACIÓN SIN PAGO ============
+function abrirAuth(){ document.getElementById('modalAuth').classList.remove('oculto'); }
+document.getElementById('maCancelar').onclick = function(){
+  document.getElementById('modalAuth').classList.add('oculto');
+};
+document.getElementById('maConfirmar').onclick = function(){
+  var motivo = document.getElementById('maMotivo').value;
+  llamarApi('autorizar', {reservaID: ultimoResultado.reservaID, staffID: SES.staffID, motivo: motivo})
+    .then(function(res){
+      document.getElementById('modalAuth').classList.add('oculto');
+      document.getElementById('maMotivo').value='';
+      if(!res.ok){ alert(res.mensaje); return; }
+      pintar({color:'verde', titulo:'✅ Acceso autorizado',
+        nombre: ultimoResultado?ultimoResultado.nombre:'', sub:'Registrado en bitácora'});
+      document.getElementById('acciones').innerHTML='';
+      reanudar(2600);
+    }).catch(function(){ alert('Sin conexión. Intenta de nuevo cuando recuperes señal.'); });
+};
+
+// ============ SINCRONIZACIÓN ============
+function sincronizar(){
+  if(!COLA.length) return;
+  var lote = COLA.slice();
+  llamarApi('sync', {escaneos: lote, staffID: SES.staffID}).then(function(r){
+    if(r && r.ok){
+      COLA = COLA.slice(lote.length);
+      actualizarStats();
+      marcarConexion(true);
+      descargarCache();
+    }
+  }).catch(function(){ marcarConexion(false); });
+}
+setInterval(function(){ if(COLA.length) sincronizar(); }, 30000);
+
+// ============ BÚSQUEDA MANUAL ============
+document.querySelectorAll('.tab').forEach(function(t){
+  t.onclick = function(){
+    document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('act')});
+    this.classList.add('act');
+    var esBuscar = this.dataset.tab === 'buscar';
+    document.getElementById('tabEscanear').classList.toggle('oculto', esBuscar);
+    document.getElementById('tabBuscar').classList.toggle('oculto', !esBuscar);
+    if(scanner){ try{ esBuscar ? scanner.pause(true) : scanner.resume(); }catch(e){} }
+  };
+});
+
+document.getElementById('btnBuscar').onclick = buscar;
+document.getElementById('qBuscar').addEventListener('keypress', function(e){ if(e.key==='Enter') buscar(); });
+
+function buscar(){
+  var q = document.getElementById('qBuscar').value;
+  var cont = document.getElementById('resBusqueda');
+  cont.innerHTML = '<div style="color:#94a3b8;font-size:13px">Buscando...</div>';
+  llamarApi('buscar', {texto: q, staffID: SES.staffID}).then(function(r){
+    if(!r.ok){ cont.innerHTML='<div style="color:#fca5a5;font-size:13px">'+r.mensaje+'</div>'; return; }
+    if(!r.resultados.length){ cont.innerHTML='<div style="color:#94a3b8;font-size:13px">Sin resultados.</div>'; return; }
+    cont.innerHTML = r.resultados.map(function(p){
+      var estado = p.estado==='DENTRO' ? '🟢 Dentro' : (p.estado==='ANULADO'?'⛔ Anulado':'⚪ Fuera');
+      return '<div class="resultado" onclick="escanearManual(\''+p.token+'\')">'+
+        '<div><b>'+p.nombre+'</b>'+
+        '<small>'+p.paseID+' · '+p.lugar+' · '+p.estatusPago+'</small></div>'+
+        '<div style="font-size:12px;white-space:nowrap">'+estado+'</div></div>';
+    }).join('');
+  }).catch(function(){ cont.innerHTML='<div style="color:#fca5a5;font-size:13px">Sin conexión.</div>'; });
+}
+
+function escanearManual(token){
+  document.querySelectorAll('.tab')[0].click();
+  setTimeout(function(){ ocupado=false; alEscanear(token); }, 250);
+}
+
+function fmt(n){
+  return '$'+Number(n||0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+</script>
+</body>
+</html>
