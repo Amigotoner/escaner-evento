@@ -630,12 +630,11 @@ function pintarPases(contenedorID, reservaID){
   c.innerHTML='<div style="color:#64748b;font-size:13px">Generando accesos...</div>';
   llamarApi('pases', {reservaID: reservaID}).then(function(pases){
     if(!pases||!pases.length){c.innerHTML='';return;}
-    var base = EV.urlBase;
     c.innerHTML = pases.map(function(p){
       return '<div style="border:1px solid var(--linea);border-radius:10px;padding:13px;margin-bottom:9px">'+
         '<div style="font-weight:650">'+p.NombrePortador+'</div>'+
         '<div style="color:#64748b;font-size:12.5px;margin:2px 0 9px">'+p.PaseID+'</div>'+
-        '<a href="'+base+'?p=pase&t='+encodeURIComponent(p.Token)+'" target="_blank" '+
+        '<a href="'+EV.urlPaseBase+encodeURIComponent(p.Token)+'" target="_blank" '+
         'style="display:inline-block;background:#0f172a;color:#fff;padding:9px 16px;border-radius:8px;'+
         'text-decoration:none;font-weight:600;font-size:13.5px">Ver código QR</a></div>';
     }).join('');

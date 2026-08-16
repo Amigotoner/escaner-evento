@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Mi acceso</title>
+<style>
+  :root{ --tinta:#0f172a; }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:var(--fuente, -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif);
+    background:#f8fafc;color:var(--tinta);min-height:100vh;padding:20px 16px;
+    display:flex;align-items:center;justify-content:center
+  }
+  .card{
+    background:#fff;border-radius:18px;padding:26px 22px;max-width:400px;width:100%;
+    box-shadow:0 4px 24px rgba(15,23,42,.08);text-align:center
+  }
+  .evento{font-size:13px;color:#64748b;text-transform:uppercase;letter-spacing:.07em;font-weight:700}
+  h1{font-size:23px;margin:8px 0 3px;letter-spacing:-.02em}
+  .meta{font-size:13.5px;color:#64748b;margin-bottom:20px}
+  .qr{
+    background:#fff;padding:14px;border:1px solid #e2e8f0;border-radius:14px;
+    display:inline-block;margin-bottom:16px
+  }
+  .qr img{display:block;width:250px;height:250px}
+  .nombre{font-size:21px;font-weight:750;letter-spacing:-.01em}
+  .paseid{font-size:12.5px;color:#94a3b8;font-family:ui-monospace,Menlo,monospace;margin-top:3px}
+  .datos{margin-top:18px;border-top:1px solid #f1f5f9;padding-top:14px}
+  .dato{display:flex;justify-content:space-between;padding:7px 0;font-size:14px}
+  .dato span:last-child{font-weight:650}
+  .aviso{padding:12px 14px;border-radius:9px;font-size:13px;margin-top:16px;line-height:1.5;text-align:left}
+  .warn{background:#fffbeb;color:#92400e;border-left:3px solid #d97706}
+  .ok{background:#f0fdf4;color:#166534;border-left:3px solid #16a34a}
+  .err{background:#fef2f2;color:#991b1b;border-left:3px solid #dc2626}
+  .nota{font-size:12px;color:#94a3b8;margin-top:18px;line-height:1.5}
+  .btnDescargar{
+    display:inline-block;background:var(--tinta);color:#fff;border:0;border-radius:9px;
+    padding:11px 20px;font-size:13.5px;font-weight:650;cursor:pointer;font-family:inherit;
+    margin-bottom:14px
+  }
+  .cargando{color:#64748b;font-size:14px}
+  .oculto{display:none}
+  .avisoConfig{
+    background:#7c2d12;color:#fed7aa;padding:13px 15px;border-radius:9px;font-size:13px;
+    margin-bottom:14px;line-height:1.5;text-align:left
+  }
+</style>
+</head>
+<body>
+<div class="card" id="card">
+  <div id="avisoConfig" class="avisoConfig oculto">
+    ⚠️ Falta configurar la URL del sistema en este archivo (constante <b>API_URL</b>, al inicio del
+    &lt;script&gt;).
+  </div>
+  <div class="cargando" id="cargando">Cargando tu acceso…</div>
+</div>
+
+<script>
+/* Pega aquí la URL de tu aplicación web de Apps Script, terminada en /exec. */
+var API_URL = 'https://script.google.com/macros/s/AKfycbx47wiWLThmArQIirAXMtA6xAytZphK8q0sQ0fnOQmCqUz5WCBwe700pizTMOp-vD2K/exec';
+
+if (!API_URL || API_URL.indexOf('PEGA_AQUI') >= 0) {
+  document.getElementById('avisoConfig').classList.remove('oculto');
+}
+
+function llamarApi(accion, datos){
+  var payload = Object.assign({p: 'apiReserva', accion: accion}, datos || {});
+  var qs = Object.keys(payload).map(function(k){
+    var v = payload[k];
+    if (v === undefined || v === null) v = '';
+    if (typeof v === 'object') v = JSON.stringify(v);
+    return encodeURIComponent(k) + '=' + encodeURIComponent(v);
+  }).join('&');
+  return fetch(API_URL + '?' + qs).then(function(r){
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  });
+}
+
+var token = new URLSearchParams(window.location.search).get('t') || '';
+var c = document.getElementById('card');
+
+llamarApi('datosPase', {token: token}).then(mostrarPase).catch(function(){
+  c.innerHTML = '<div class="aviso err" style="text-align:center">No pudimos cargar tu acceso. Revisa tu conexión e intenta de nuevo.</div>';
+});
+
+function mostrarPase(D){
+  if(!D || !D.ok){
+    c.innerHTML = '<div class="aviso err" style="text-align:center">'+
+      ((D && D.mensaje) || 'Este código no es válido.')+'</div>';
+    return;
+  }
+
+  // Identidad visual del cliente (Config > COLOR_PRINCIPAL / URL_LOGO / FUENTE_GOOGLE)
+  document.documentElement.style.setProperty('--tinta', D.colorPrincipal);
+  var logoHtml = D.urlLogo
+    ? '<img src="'+D.urlLogo+'" alt="Logo" style="max-height:48px;max-width:100%;margin-bottom:12px">'
+    : '';
+  if(D.fuenteGoogle){
+    var linkFuente = document.createElement('link');
+    linkFuente.rel = 'stylesheet';
+    linkFuente.href = 'https://fonts.googleapis.com/css2?family=' +
+      encodeURIComponent(D.fuenteGoogle).replace(/%20/g,'+') + ':wght@400;600;700&display=swap';
+    document.head.appendChild(linkFuente);
+    document.documentElement.style.setProperty('--fuente', "'" + D.fuenteGoogle + "', sans-serif");
+  }
+
+  // El QR ya viene generado desde el servidor (obtenerDatosPasePublico), como
+  // imagen embebida. Si por algo faltara, usamos la URL externa como respaldo.
+  var qrUrl = D.qrDataUri || ('https://api.qrserver.com/v1/create-qr-code/?size=500x500&margin=0&data=' +
+    encodeURIComponent(D.token));
+
+  var estadoPago = '';
+  if(D.estatusPago === 'PAGADO'){
+    estadoPago = '<div class="aviso ok"><b>✅ Pago confirmado.</b><br>' +
+      'Presenta este código en la entrada y recibirás tu pulsera.</div>';
+  } else if(D.metodoPago === 'EFECTIVO'){
+    estadoPago = '<div class="aviso warn"><b>💵 Pago pendiente: ' + D.saldoTexto + '</b><br>' +
+      'Realiza tu pago en efectivo con el personal de caja al ingresar. ' +
+      'Tu acceso es a lugares generales, sin mesa asignada.</div>';
+  } else {
+    estadoPago = '<div class="aviso warn"><b>⏳ Pago pendiente: ' + D.saldoTexto + '</b><br>' +
+      'Aún no hemos verificado tu transferencia. Si ya pagaste, reenvía tu comprobante ' +
+      'para que confirmemos tu acceso antes del evento.</div>';
+  }
+
+  c.innerHTML =
+    logoHtml +
+    '<div class="evento">' + D.evento + '</div>' +
+    '<h1>Acceso personal</h1>' +
+    '<div class="meta">' + D.fecha + ' · ' + D.hora + ' h<br>' + D.lugarEvento + '</div>' +
+    '<div class="qr"><img id="imgQR" src="' + qrUrl + '" alt="Código QR de acceso"></div>' +
+    '<button class="btnDescargar" id="btnDescargarQR">Descargar código QR</button>' +
+    '<div class="nombre">' + D.nombre + '</div>' +
+    '<div class="paseid">' + D.paseID + '</div>' +
+    '<div class="datos">' +
+      '<div class="dato"><span>Ubicación</span><span>' + D.ubicacion + '</span></div>' +
+      '<div class="dato"><span>Estatus de pago</span><span>' + D.estatusPago + '</span></div>' +
+    '</div>' +
+    estadoPago +
+    '<div class="nota">Este código es personal e intransferible. ' +
+    'Solo permite un ingreso: al entrar recibirás una pulsera que te dejará ' +
+    'salir y volver libremente durante el evento.<br><br>' +
+    'Sube el brillo de tu pantalla al momento de escanear.</div>';
+
+  document.getElementById('btnDescargarQR').addEventListener('click', function(){
+    if (qrUrl.indexOf('data:') === 0) {
+      var a = document.createElement('a');
+      a.href = qrUrl;
+      a.download = 'acceso-' + D.paseID + '.png';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } else {
+      window.open(qrUrl, '_blank');
+    }
+  });
+
+  if('wakeLock' in navigator){
+    navigator.wakeLock.request('screen').catch(function(){});
+  }
+}
+</script>
+</body>
+</html>
