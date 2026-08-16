@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reservación</title>
+<style>
+  :root{
+    --tinta:#0f172a; --suave:#64748b; --linea:#e2e8f0; --fondo:#f8fafc;
+    --acento:#0f172a; --ok:#16a34a; --alerta:#d97706; --error:#dc2626;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:var(--fuente, -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif);
+    background:var(--fondo); color:var(--tinta); line-height:1.55;
+    padding:20px 16px 60px;
+  }
+  .wrap{max-width:560px;margin:0 auto}
+  .card{background:#fff;border:1px solid var(--linea);border-radius:14px;padding:22px;margin-bottom:16px}
+  h1{font-size:26px;line-height:1.2;margin-bottom:6px;letter-spacing:-.02em}
+  h2{font-size:17px;margin-bottom:14px;letter-spacing:-.01em}
+  .meta{color:var(--suave);font-size:14px;margin-bottom:4px}
+  .desc{font-size:15px;color:#334155;margin-top:12px}
+  label{display:block;font-size:13px;font-weight:600;margin:14px 0 5px;color:#334155}
+  input,select,textarea{
+    width:100%;padding:11px 13px;border:1px solid #cbd5e1;border-radius:9px;
+    font-size:16px;font-family:inherit;background:#fff;color:var(--tinta)
+  }
+  input:focus,select:focus{outline:2px solid var(--tinta);outline-offset:-1px;border-color:transparent}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .opciones{display:grid;gap:9px;margin-top:6px}
+  .opcion{
+    border:1.5px solid #cbd5e1;border-radius:10px;padding:13px 15px;cursor:pointer;
+    display:flex;justify-content:space-between;align-items:center;gap:10px;background:#fff;
+    transition:border-color .12s, background .12s
+  }
+  .opcion:hover{border-color:#94a3b8}
+  .opcion.sel{border-color:var(--tinta);background:#f1f5f9}
+  .opcion .t{font-weight:650;font-size:15px}
+  .opcion .s{font-size:12.5px;color:var(--suave);margin-top:2px}
+  .opcion .p{font-weight:700;white-space:nowrap;font-size:15px}
+  .mesas{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px;margin-top:8px;
+    max-height:280px;overflow-y:auto;padding:2px}
+  .mesa{
+    border:1.5px solid #cbd5e1;border-radius:9px;padding:9px 6px;text-align:center;
+    cursor:pointer;background:#fff;transition:border-color .12s
+  }
+  .mesa:hover{border-color:#94a3b8}
+  .mesa.sel{border-color:var(--tinta);background:#f1f5f9}
+  .mesa b{display:block;font-size:14px}
+  .mesa span{font-size:11.5px;color:var(--suave)}
+  .total{
+    display:flex;justify-content:space-between;align-items:baseline;
+    padding:15px 0;border-top:1px solid var(--linea);margin-top:18px
+  }
+  .total .n{font-size:26px;font-weight:700;letter-spacing:-.02em}
+  button.cta{
+    width:100%;padding:15px;background:var(--acento);color:#fff;border:0;border-radius:10px;
+    font-size:16px;font-weight:650;cursor:pointer;font-family:inherit;margin-top:8px
+  }
+  button.cta:disabled{background:#94a3b8;cursor:not-allowed}
+  button.sec{
+    width:100%;padding:13px;background:#fff;color:var(--tinta);border:1.5px solid #cbd5e1;
+    border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;margin-top:9px
+  }
+  .aviso{padding:13px 15px;border-radius:9px;font-size:13.5px;margin:14px 0;line-height:1.5}
+  .aviso.info{background:#eff6ff;color:#1e40af;border-left:3px solid #3b82f6}
+  .aviso.warn{background:#fffbeb;color:#92400e;border-left:3px solid var(--alerta)}
+  .aviso.err{background:#fef2f2;color:#991b1b;border-left:3px solid var(--error)}
+  .aviso.ok{background:#f0fdf4;color:#166534;border-left:3px solid var(--ok)}
+  .oculto{display:none}
+  .chkAviso{display:flex;align-items:flex-start;gap:9px;margin-top:16px;cursor:pointer;
+    font-size:13.5px;color:#334155;font-weight:400}
+  .chkAviso input{width:auto;margin-top:2px;flex-shrink:0}
+  .chkAviso a{color:var(--tinta);font-weight:600}
+  .modalAviso{
+    display:none;position:fixed;inset:0;background:rgba(15,23,42,.55);
+    align-items:center;justify-content:center;padding:20px;z-index:200
+  }
+  .modalAviso.abierto{display:flex}
+  .modalAviso .caja{
+    background:#fff;border-radius:14px;padding:24px;max-width:480px;width:100%;
+    max-height:80vh;overflow-y:auto
+  }
+  .modalAviso .texto{font-size:13.5px;color:#334155;line-height:1.6;white-space:pre-line}
+  .dato{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid #f1f5f9;font-size:14.5px}
+  .dato span:last-child{font-weight:650;text-align:right}
+  .copiable{
+    background:#f1f5f9;padding:11px 13px;border-radius:8px;font-family:ui-monospace,Menlo,monospace;
+    font-size:15px;display:flex;justify-content:space-between;align-items:center;gap:10px;margin:7px 0;
+    word-break:break-all
+  }
+  .copiable button{background:var(--tinta);color:#fff;border:0;border-radius:6px;padding:6px 11px;
+    font-size:12px;cursor:pointer;font-family:inherit;white-space:nowrap}
+  .cargando{text-align:center;padding:50px 20px;color:var(--suave)}
+  .spinner{
+    width:26px;height:26px;border:3px solid var(--linea);border-top-color:var(--tinta);
+    border-radius:50%;animation:giro .7s linear infinite;margin:0 auto 14px
+  }
+  @keyframes giro{to{transform:rotate(360deg)}}
+  .badge{display:inline-block;background:#dcfce7;color:#166534;padding:3px 9px;border-radius:20px;
+    font-size:11.5px;font-weight:700;margin-left:7px;vertical-align:middle}
+  .paso{font-size:12px;color:var(--suave);text-transform:uppercase;letter-spacing:.06em;
+    font-weight:700;margin-bottom:10px}
+  .avisoConfig{
+    background:#7c2d12;color:#fed7aa;padding:13px 15px;border-radius:9px;font-size:13px;
+    margin-bottom:14px;line-height:1.5
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div id="avisoConfig" class="avisoConfig oculto">
+    ⚠️ Falta configurar la URL del sistema en este archivo (constante <b>API_URL</b>, al inicio del
+    &lt;script&gt;). Pega ahí la URL de tu aplicación web de Apps Script terminada en <code>/exec</code>.
+  </div>
+
+  <div id="cargando" class="cargando">
+    <div class="spinner"></div>
+    Cargando evento...
+  </div>
+
+  <!-- ============ PASO 1: FORMULARIO ============ -->
+  <div id="paso1" class="oculto">
+    <div class="card">
+      <img id="imgLogo" class="oculto" style="max-height:56px;max-width:100%;margin-bottom:14px" alt="Logo">
+      <h1 id="tNombre"></h1>
+      <div class="meta" id="tFecha"></div>
+      <div class="meta" id="tLugar"></div>
+      <div class="desc" id="tDesc"></div>
+      <div id="tPreventa"></div>
+    </div>
+
+    <div id="cerrado" class="oculto">
+      <div class="card">
+        <div class="aviso err"><b>Venta cerrada.</b> Por el momento no estamos recibiendo nuevas reservaciones.</div>
+      </div>
+    </div>
+
+    <div id="formulario">
+      <div class="card">
+        <div class="paso">Paso 1 de 3</div>
+        <h2>Tus datos</h2>
+        <label>Nombre completo</label>
+        <input id="nombre" type="text" placeholder="Como aparece en tu identificación">
+        <div class="grid2">
+          <div>
+            <label>Correo electrónico</label>
+            <input id="email" type="email" placeholder="tu@correo.com" autocapitalize="off">
+          </div>
+          <div>
+            <label>Teléfono</label>
+            <input id="telefono" type="tel" inputmode="numeric" placeholder="10 dígitos">
+          </div>
+        </div>
+        <label>¿Cuántas personas asisten? (incluyéndote)</label>
+        <select id="personas"></select>
+        <div id="camposAcomp"></div>
+      </div>
+
+      <div class="card">
+        <div class="paso">Paso 2 de 3</div>
+        <h2>Método de pago</h2>
+        <div class="opciones">
+          <div class="opcion" data-metodo="TARJETA" id="optTarjeta">
+            <div><div class="t">Tarjeta de crédito o débito</div>
+              <div class="s">Pago inmediato y seguro. Confirmación automática</div></div>
+          </div>
+          <div class="opcion" data-metodo="TRANSFERENCIA">
+            <div><div class="t">Transferencia SPEI</div>
+              <div class="s">Desde tu banca en línea. Requiere enviar comprobante</div></div>
+          </div>
+          <div class="opcion" data-metodo="EFECTIVO">
+            <div><div class="t">Efectivo al ingresar</div>
+              <div class="s">Pagas en la puerta el día del evento</div></div>
+          </div>
+        </div>
+        <div id="avisoEfectivo" class="aviso warn oculto">
+          <b>El pago en efectivo no incluye mesa asignada.</b><br>
+          Tu acceso será a lugares generales. Si quieres reservar mesa, elige tarjeta o transferencia.
+        </div>
+      </div>
+
+      <div class="card" id="cardUbicacion">
+        <div class="paso">Paso 3 de 3</div>
+        <h2>Ubicación</h2>
+        <div class="opciones" id="tiposLugar">
+          <div class="opcion" data-tipo="MESA">
+            <div><div class="t">Mesa reservada</div>
+              <div class="s">Lugar asignado en una mesa específica</div></div>
+            <div class="p" id="precioMesa"></div>
+          </div>
+          <div class="opcion" data-tipo="GENERAL">
+            <div><div class="t">Lugar general</div>
+              <div class="s" id="dispGenerales"></div></div>
+            <div class="p" id="precioGeneral"></div>
+          </div>
+        </div>
+
+        <div id="selectorMesas" class="oculto">
+          <label>Elige tu mesa</label>
+          <div class="aviso info" style="margin-top:0">
+            Solo se muestran mesas con espacio para tu grupo. Las mesas pueden compartirse
+            con otros invitados.
+          </div>
+          <div class="mesas" id="listaMesas"></div>
+        </div>
+
+        <div class="total">
+          <div>
+            <div style="font-size:13px;color:var(--suave)">Total a pagar</div>
+            <div style="font-size:12.5px;color:var(--suave)" id="desglose"></div>
+          </div>
+          <div class="n" id="montoTotal">$0.00</div>
+        </div>
+
+        <label class="chkAviso">
+          <input type="checkbox" id="chkAviso">
+          <span>He leído y acepto el <a href="#" id="linkAviso">Aviso de Privacidad</a>.</span>
+        </label>
+
+        <div id="errorForm" class="aviso err oculto"></div>
+        <button class="cta" id="btnReservar">Continuar</button>
+        <div style="font-size:12px;color:var(--suave);text-align:center;margin-top:10px" id="notaBloqueo"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ RESULTADO: TRANSFERENCIA ============ -->
+  <div id="resTransferencia" class="oculto">
+    <div class="card">
+      <div class="aviso ok"><b>Tu lugar quedó apartado.</b> Completa el pago para confirmarlo.</div>
+      <h2>Datos para tu transferencia</h2>
+      <div class="copiable"><span id="trClabe"></span><button onclick="copiar('trClabe',this)">Copiar</button></div>
+      <div class="dato"><span>Banco</span><span id="trBanco"></span></div>
+      <div class="dato"><span>Beneficiario</span><span id="trBenef"></span></div>
+      <div class="dato"><span>Monto exacto</span><span id="trMonto"></span></div>
+      <div class="dato"><span>Tu reservación</span><span id="trReserva"></span></div>
+
+      <div class="aviso warn">
+        <b>Dos pasos obligatorios:</b><br><br>
+        <b>1.</b> En el concepto o referencia de la transferencia escribe tu código:
+        <div class="copiable" style="margin:8px 0">
+          <span id="trCodigo" style="font-size:19px;font-weight:700"></span>
+          <button onclick="copiar('trCodigo',this)">Copiar</button>
+        </div>
+        <b>2.</b> Reenvía tu comprobante de transferencia a:
+        <div class="copiable" style="margin:8px 0">
+          <span id="trCorreo"></span><button onclick="copiar('trCorreo',this)">Copiar</button>
+        </div>
+        El comprobante es lo que nos permite identificar tu pago. Sin él, tu acceso podría
+        aparecer como no verificado al llegar al evento.
+      </div>
+
+      <div class="aviso info">
+        Tienes <b id="trHoras"></b> horas para completar el pago. Después de ese plazo tu lugar
+        se libera automáticamente.
+      </div>
+
+      <button class="cta" id="btnYaTransferi">Ya envié mi comprobante</button>
+      <div id="okComprobante" class="aviso ok oculto" style="margin-top:12px">
+        Recibido. Verificaremos tu pago y te confirmaremos por correo.
+      </div>
+    </div>
+    <div class="card">
+      <h2>Tus accesos</h2>
+      <p style="font-size:14px;color:#334155;margin-bottom:12px">
+        Te enviamos por correo un código QR para cada persona. Preséntalo en la entrada.
+      </p>
+      <div id="pasesTransferencia"></div>
+    </div>
+  </div>
+
+  <!-- ============ RESULTADO: EFECTIVO ============ -->
+  <div id="resEfectivo" class="oculto">
+    <div class="card">
+      <div class="aviso ok"><b>Tu lugar quedó apartado.</b></div>
+      <h2>Pagarás al ingresar</h2>
+      <div class="dato"><span>Reservación</span><span id="efReserva"></span></div>
+      <div class="dato"><span>Personas</span><span id="efPersonas"></span></div>
+      <div class="dato"><span>Monto a pagar en puerta</span><span id="efMonto"></span></div>
+      <div class="aviso warn">
+        Tu acceso es a <b>lugares generales</b>, sin mesa asignada.<br><br>
+        Presenta tu código QR en la entrada y realiza el pago en efectivo con nuestro personal
+        de caja. Te sugerimos llegar con el monto exacto.
+      </div>
+      <p style="font-size:14px;color:#334155">
+        Te enviamos por correo un código QR para cada persona.
+      </p>
+      <div id="pasesEfectivo" style="margin-top:12px"></div>
+    </div>
+  </div>
+
+  <!-- ============ RESULTADO: ALTERNATIVAS (pago fallido) ============ -->
+  <div id="resAlternativas" class="oculto">
+    <div class="card">
+      <div class="aviso err" id="msgAlternativas"></div>
+      <h2>Elige otro método de pago</h2>
+      <p style="font-size:14px;color:#334155;margin-bottom:14px">
+        Tu lugar sigue apartado unos minutos más. Elige cómo quieres completar tu pago.
+      </p>
+      <button class="cta" id="btnReintentar">Reintentar con tarjeta</button>
+      <button class="sec" id="btnAltTransferencia">Pagar por transferencia SPEI</button>
+      <button class="sec" id="btnAltEfectivo">Pagar en efectivo al ingresar</button>
+      <div style="font-size:12.5px;color:var(--suave);margin-top:12px">
+        El pago en efectivo no incluye mesa asignada.
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ============ MODAL: AVISO DE PRIVACIDAD ============ -->
+<div class="modalAviso" id="modalAviso">
+  <div class="caja">
+    <h2>Aviso de Privacidad</h2>
+    <div class="texto" id="textoAviso"></div>
+    <button class="cta" id="btnCerrarAviso" style="margin-top:18px">Entendido</button>
+  </div>
+</div>
+
+<script>
+/* ==========================================================================
+   CONFIGURACIÓN — lo único que hay que editar en este archivo
+   ==========================================================================
+   Pega aquí la URL de tu aplicación web de Apps Script (Implementar > Nueva
+   implementación > Aplicación web), terminada en /exec. Es la misma URL que
+   usas para Reserva, Scanner y Admin, SIN "?p=..." al final.
+*/
+var API_URL = 'https://script.google.com/macros/s/AKfycbx47wiWLThmArQIirAXMtA6xAytZphK8q0sQ0fnOQmCqUz5WCBwe700pizTMOp-vD2K/exec';
+
+if (!API_URL || API_URL.indexOf('PEGA_AQUI') >= 0) {
+  document.getElementById('avisoConfig').classList.remove('oculto');
+}
+
+/* ==========================================================================
+   PUENTE CON APPS SCRIPT
+   ==========================================================================
+   Esta página vive fuera de Apps Script porque Safari (sobre todo en iOS)
+   no puede abrir apps web completas de Apps Script: bloquea cookies entre
+   dominios de Google que Apps Script necesita para su redirección interna.
+   Usamos GET (parámetros en la URL), no POST, por la misma razón que en
+   ScannerExterno.html: un POST pierde su cuerpo al seguir la redirección
+   302 que usan las apps web de Apps Script.
+*/
+function llamarApi(accion, datos){
+  var payload = Object.assign({p: 'apiReserva', accion: accion}, datos || {});
+  var qs = Object.keys(payload).map(function(k){
+    var v = payload[k];
+    if (v === undefined || v === null) v = '';
+    if (typeof v === 'object') v = JSON.stringify(v);
+    return encodeURIComponent(k) + '=' + encodeURIComponent(v);
+  }).join('&');
+  return fetch(API_URL + '?' + qs).then(function(r){
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  });
+}
+
+var EV = null;
+var estado = { metodo:null, tipoLugar:null, numMesa:null, personas:1, reservaID:null };
+
+// ---------- Arranque ----------
+llamarApi('datosEvento').then(iniciar).catch(fallo);
+
+function fallo(err){
+  document.getElementById('cargando').innerHTML =
+    '<div class="aviso err">No pudimos cargar el evento. Recarga la página.<br><small>'+err+'</small></div>';
+}
+
+function iniciar(datos){
+  EV = datos;
+  document.getElementById('cargando').classList.add('oculto');
+  document.getElementById('paso1').classList.remove('oculto');
+
+  // Identidad visual del cliente (Config > COLOR_PRINCIPAL / COLOR_ACENTO / URL_LOGO)
+  document.documentElement.style.setProperty('--tinta', datos.colorPrincipal);
+  document.documentElement.style.setProperty('--acento', datos.colorAcento);
+  if(datos.urlLogo){
+    var logo = document.getElementById('imgLogo');
+    logo.src = datos.urlLogo;
+    logo.classList.remove('oculto');
+  }
+  if(datos.fuenteGoogle){
+    var linkFuente = document.createElement('link');
+    linkFuente.rel = 'stylesheet';
+    linkFuente.href = 'https://fonts.googleapis.com/css2?family=' +
+      encodeURIComponent(datos.fuenteGoogle).replace(/%20/g,'+') + ':wght@400;600;700&display=swap';
+    document.head.appendChild(linkFuente);
+    document.documentElement.style.setProperty('--fuente', "'" + datos.fuenteGoogle + "', sans-serif");
+  }
+
+  document.getElementById('tNombre').textContent = datos.nombre;
+  document.getElementById('tFecha').textContent = fechaLarga(datos.fecha) + ' · ' + datos.hora + ' h';
+  document.getElementById('tLugar').textContent = datos.lugar;
+  document.getElementById('tDesc').textContent = datos.descripcion;
+  document.getElementById('textoAviso').textContent = datos.avisoPrivacidad || '';
+
+  if(datos.esPreventa){
+    document.getElementById('tPreventa').innerHTML =
+      '<div class="aviso ok" style="margin-bottom:0">Precio de preventa vigente hasta el '+
+      fechaLarga(datos.finPreventa)+'.</div>';
+  }
+  if(!datos.ventaAbierta){
+    document.getElementById('cerrado').classList.remove('oculto');
+    document.getElementById('formulario').classList.add('oculto');
+    return;
+  }
+  if(!datos.mpActivo){
+    document.getElementById('optTarjeta').style.display='none';
+  }
+
+  var sel = document.getElementById('personas');
+  for(var i=1;i<=datos.maxPersonas;i++){
+    var o=document.createElement('option');
+    o.value=i; o.textContent = i + (i===1?' persona':' personas');
+    sel.appendChild(o);
+  }
+  document.getElementById('precioMesa').textContent = money(datos.precioMesa)+' c/u';
+  document.getElementById('precioGeneral').textContent = money(datos.precioGeneral)+' c/u';
+  document.getElementById('dispGenerales').textContent =
+    datos.generalesDisponibles + ' lugares disponibles · sin mesa asignada';
+
+  sel.addEventListener('change', function(){
+    estado.personas = Number(this.value);
+    camposAcompanantes();
+    if(estado.tipoLugar==='MESA') cargarMesas();
+    calcular();
+  });
+  camposAcompanantes();
+
+  document.querySelectorAll('[data-metodo]').forEach(function(el){
+    el.addEventListener('click', function(){ elegirMetodo(this.dataset.metodo, this); });
+  });
+  document.querySelectorAll('[data-tipo]').forEach(function(el){
+    el.addEventListener('click', function(){ elegirTipo(this.dataset.tipo, this); });
+  });
+  document.getElementById('btnReservar').addEventListener('click', enviar);
+  document.getElementById('btnYaTransferi').addEventListener('click', confirmarComprobante);
+  document.getElementById('linkAviso').addEventListener('click', function(e){
+    e.preventDefault();
+    document.getElementById('modalAviso').classList.add('abierto');
+  });
+  document.getElementById('btnCerrarAviso').addEventListener('click', function(){
+    document.getElementById('modalAviso').classList.remove('abierto');
+  });
+  document.getElementById('btnReintentar').addEventListener('click', function(){ cambiarMetodo('TARJETA'); });
+  document.getElementById('btnAltTransferencia').addEventListener('click', function(){ cambiarMetodo('TRANSFERENCIA'); });
+  document.getElementById('btnAltEfectivo').addEventListener('click', function(){ cambiarMetodo('EFECTIVO'); });
+}
+
+function camposAcompanantes(){
+  var cont = document.getElementById('camposAcomp');
+  cont.innerHTML='';
+  if(estado.personas<2) return;
+  var h='<label>Nombres de tus acompañantes <span style="font-weight:400;color:#64748b">(opcional, puedes completarlos después)</span></label>';
+  for(var i=1;i<estado.personas;i++){
+    h+='<input class="acomp" type="text" placeholder="Acompañante '+i+'" style="margin-bottom:7px">';
+  }
+  cont.innerHTML=h;
+}
+
+function elegirMetodo(m, el){
+  estado.metodo = m;
+  document.querySelectorAll('[data-metodo]').forEach(function(x){x.classList.remove('sel')});
+  el.classList.add('sel');
+
+  var esEfectivo = (m==='EFECTIVO');
+  document.getElementById('avisoEfectivo').classList.toggle('oculto', !esEfectivo);
+  document.getElementById('cardUbicacion').classList.toggle('oculto', false);
+  document.getElementById('tiposLugar').classList.toggle('oculto', esEfectivo);
+
+  if(esEfectivo){
+    estado.tipoLugar='GENERAL'; estado.numMesa=null;
+    document.getElementById('selectorMesas').classList.add('oculto');
+  }
+
+  var notas = {
+    TARJETA: 'Tu lugar se aparta '+EV.minutosBloqueo+' minutos mientras completas el pago.',
+    TRANSFERENCIA: 'Tu lugar queda apartado '+EV.horasLimiteSPEI+' horas para que completes tu transferencia.',
+    EFECTIVO: 'Tu lugar queda apartado sin fecha límite — pagas en efectivo al ingresar el día del evento.'
+  };
+  document.getElementById('notaBloqueo').textContent = notas[m] || '';
+
+  calcular();
+}
+
+function elegirTipo(t, el){
+  estado.tipoLugar = t; estado.numMesa=null;
+  document.querySelectorAll('[data-tipo]').forEach(function(x){x.classList.remove('sel')});
+  el.classList.add('sel');
+  var esMesa = (t==='MESA');
+  document.getElementById('selectorMesas').classList.toggle('oculto', !esMesa);
+  if(esMesa) cargarMesas();
+  calcular();
+}
+
+function cargarMesas(){
+  var cont = document.getElementById('listaMesas');
+  cont.innerHTML='<div style="grid-column:1/-1;color:#64748b;font-size:13px;padding:8px">Buscando mesas...</div>';
+  llamarApi('mesasDisponibles', {numPersonas: estado.personas}).then(function(mesas){
+    if(!mesas.length){
+      cont.innerHTML='<div style="grid-column:1/-1" class="aviso warn">'+
+        'No hay mesas con '+estado.personas+' lugares juntos disponibles. '+
+        'Puedes elegir lugares generales o reducir el número de personas.</div>';
+      return;
+    }
+    cont.innerHTML='';
+    mesas.forEach(function(m){
+      var d=document.createElement('div');
+      d.className='mesa';
+      d.innerHTML='<b>Mesa '+m.numMesa+'</b><span>'+m.disponibles+' libres</span>';
+      d.addEventListener('click',function(){
+        estado.numMesa=m.numMesa;
+        document.querySelectorAll('.mesa').forEach(function(x){x.classList.remove('sel')});
+        d.classList.add('sel');
+      });
+      cont.appendChild(d);
+    });
+  }).catch(function(){
+    cont.innerHTML='<div style="grid-column:1/-1" class="aviso err">No se pudo cargar la lista de mesas. Revisa tu conexión.</div>';
+  });
+}
+
+function calcular(){
+  if(!estado.tipoLugar){ document.getElementById('montoTotal').textContent='$0.00'; return; }
+  var pu = estado.tipoLugar==='MESA' ? EV.precioMesa : EV.precioGeneral;
+  var total = pu*estado.personas;
+  document.getElementById('montoTotal').textContent = money(total);
+  document.getElementById('desglose').textContent = estado.personas+' × '+money(pu);
+}
+
+function enviar(){
+  var err = document.getElementById('errorForm');
+  err.classList.add('oculto');
+
+  if(!estado.metodo) return mostrarError('Elige un método de pago.');
+  if(!estado.tipoLugar) return mostrarError('Elige tu ubicación.');
+  if(estado.tipoLugar==='MESA' && !estado.numMesa) return mostrarError('Selecciona una mesa.');
+  if(!document.getElementById('chkAviso').checked) return mostrarError('Debes aceptar el Aviso de Privacidad para continuar.');
+
+  var acomp=[];
+  document.querySelectorAll('.acomp').forEach(function(i){acomp.push(i.value)});
+
+  var datos = {
+    nombre: document.getElementById('nombre').value,
+    email: document.getElementById('email').value,
+    telefono: document.getElementById('telefono').value,
+    tipoLugar: estado.tipoLugar,
+    numMesa: estado.numMesa,
+    numPersonas: estado.personas,
+    acompanantes: acomp,
+    metodoPago: estado.metodo,
+    aceptoAviso: document.getElementById('chkAviso').checked
+  };
+
+  var btn=document.getElementById('btnReservar');
+  btn.disabled=true; btn.textContent='Procesando...';
+
+  llamarApi('crearReserva', {datos: datos})
+    .then(function(r){ btn.disabled=false; btn.textContent='Continuar'; manejar(r); })
+    .catch(function(e){
+      btn.disabled=false; btn.textContent='Continuar';
+      mostrarError('Ocurrió un error. Intenta de nuevo. ('+e+')');
+    });
+}
+
+function mostrarError(m){
+  var err=document.getElementById('errorForm');
+  err.textContent=m; err.classList.remove('oculto');
+  err.scrollIntoView({behavior:'smooth',block:'center'});
+}
+
+function manejar(r){
+  if(!r.ok){
+    var msg = r.mensaje || 'No se pudo completar la reservación.';
+    if(r.alternativas && r.alternativas.length){
+      msg += ' Mesas con espacio: ' + r.alternativas.map(function(m){return 'Mesa '+m.numMesa}).join(', ')+'.';
+      cargarMesas();
+    }
+    return mostrarError(msg);
+  }
+  estado.reservaID = r.reservaID;
+
+  if(r.siguiente==='REDIRIGIR'){ window.location.href = r.url; return; }
+  if(r.siguiente==='TRANSFERENCIA') return vistaTransferencia(r);
+  if(r.siguiente==='EFECTIVO') return vistaEfectivo(r);
+  if(r.siguiente==='ALTERNATIVAS') return vistaAlternativas(r.mensaje);
+}
+
+function ocultarTodo(){
+  ['paso1','resTransferencia','resEfectivo','resAlternativas'].forEach(function(id){
+    document.getElementById(id).classList.add('oculto');
+  });
+  window.scrollTo(0,0);
+}
+
+function vistaTransferencia(r){
+  ocultarTodo();
+  document.getElementById('resTransferencia').classList.remove('oculto');
+  document.getElementById('trClabe').textContent = r.datos.clabe;
+  document.getElementById('trBanco').textContent = r.datos.banco;
+  document.getElementById('trBenef').textContent = r.datos.beneficiario;
+  document.getElementById('trMonto').textContent = money(r.datos.monto);
+  document.getElementById('trReserva').textContent = r.reservaID;
+  document.getElementById('trCodigo').textContent = r.datos.codigo;
+  document.getElementById('trCorreo').textContent = r.datos.correoComprobantes;
+  document.getElementById('trHoras').textContent = r.datos.horasLimite;
+  pintarPases('pasesTransferencia', r.reservaID);
+}
+
+function vistaEfectivo(r){
+  ocultarTodo();
+  document.getElementById('resEfectivo').classList.remove('oculto');
+  document.getElementById('efReserva').textContent = r.reservaID;
+  document.getElementById('efPersonas').textContent = r.datos.personas;
+  document.getElementById('efMonto').textContent = money(r.datos.monto);
+  pintarPases('pasesEfectivo', r.reservaID);
+}
+
+function vistaAlternativas(msg){
+  ocultarTodo();
+  document.getElementById('resAlternativas').classList.remove('oculto');
+  document.getElementById('msgAlternativas').textContent = msg || 'El pago no pudo completarse.';
+}
+
+function pintarPases(contenedorID, reservaID){
+  var c=document.getElementById(contenedorID);
+  c.innerHTML='<div style="color:#64748b;font-size:13px">Generando accesos...</div>';
+  llamarApi('pases', {reservaID: reservaID}).then(function(pases){
+    if(!pases||!pases.length){c.innerHTML='';return;}
+    var base = EV.urlBase;
+    c.innerHTML = pases.map(function(p){
+      return '<div style="border:1px solid var(--linea);border-radius:10px;padding:13px;margin-bottom:9px">'+
+        '<div style="font-weight:650">'+p.NombrePortador+'</div>'+
+        '<div style="color:#64748b;font-size:12.5px;margin:2px 0 9px">'+p.PaseID+'</div>'+
+        '<a href="'+base+'?p=pase&t='+encodeURIComponent(p.Token)+'" target="_blank" '+
+        'style="display:inline-block;background:#0f172a;color:#fff;padding:9px 16px;border-radius:8px;'+
+        'text-decoration:none;font-weight:600;font-size:13.5px">Ver código QR</a></div>';
+    }).join('');
+  }).catch(function(){
+    c.innerHTML = '<div class="aviso err">No se pudieron cargar los accesos. Revisa tu correo — ahí también te los enviamos.</div>';
+  });
+}
+
+function confirmarComprobante(){
+  var b=document.getElementById('btnYaTransferi');
+  b.disabled=true; b.textContent='Registrando...';
+  llamarApi('comprobante', {reservaID: estado.reservaID}).then(function(){
+    b.classList.add('oculto');
+    document.getElementById('okComprobante').classList.remove('oculto');
+  }).catch(function(){
+    b.disabled=false; b.textContent='Ya envié mi comprobante';
+    alert('No se pudo registrar. Intenta de nuevo.');
+  });
+}
+
+function cambiarMetodo(m){
+  llamarApi('cambiarMetodo', {reservaID: estado.reservaID, metodo: m}).then(function(r){
+    if(!r.ok) return alert(r.mensaje);
+    manejar(r);
+  }).catch(function(){ alert('No se pudo cambiar el método de pago. Intenta de nuevo.'); });
+}
+
+// ---------- Utilidades ----------
+function money(n){
+  return '$'+Number(n).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+function fechaLarga(iso){
+  if(!iso) return '';
+  var m=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  var p=String(iso).split('-');
+  if(p.length!==3) return iso;
+  return Number(p[2])+' de '+m[Number(p[1])-1]+' de '+p[0];
+}
+function copiar(id, btn){
+  var t=document.getElementById(id).textContent;
+  var ta=document.createElement('textarea');
+  ta.value=t; document.body.appendChild(ta); ta.select();
+  try{ document.execCommand('copy'); btn.textContent='Copiado'; setTimeout(function(){btn.textContent='Copiar'},1600); }
+  catch(e){}
+  document.body.removeChild(ta);
+}
+</script>
+</body>
+</html>
