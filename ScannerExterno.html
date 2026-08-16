@@ -355,7 +355,7 @@ function mostrar(r){
     }
     actualizarStats();
   }
-  reanudar(r.color==='rojo' ? 4500 : 2600);
+  reanudar(r.color==='rojo' ? 9000 : 2600);
 }
 
 function chipsDe(r){
@@ -407,7 +407,7 @@ document.getElementById('mcConfirmar').onclick = function(){
   var monto = Number(document.getElementById('mcMonto').value);
   var btn = this;
   btn.disabled = true; btn.textContent='Registrando...';
-  llamarApi('cobrar', {reservaID: ultimoResultado.reservaID, monto: monto, staffID: SES.staffID})
+  llamarApi('cobrar', {reservaID: ultimoResultado.reservaID, monto: monto, staffID: SES.staffID, paseID: ultimoResultado.paseID})
     .then(function(res){
       btn.disabled=false; btn.textContent='Confirmar cobro';
       document.getElementById('modalCobro').classList.add('oculto');
@@ -433,7 +433,7 @@ document.getElementById('maCancelar').onclick = function(){
 };
 document.getElementById('maConfirmar').onclick = function(){
   var motivo = document.getElementById('maMotivo').value;
-  llamarApi('autorizar', {reservaID: ultimoResultado.reservaID, staffID: SES.staffID, motivo: motivo})
+  llamarApi('autorizar', {reservaID: ultimoResultado.reservaID, staffID: SES.staffID, motivo: motivo, paseID: ultimoResultado.paseID})
     .then(function(res){
       document.getElementById('modalAuth').classList.add('oculto');
       document.getElementById('maMotivo').value='';
