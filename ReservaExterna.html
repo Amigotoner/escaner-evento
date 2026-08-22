@@ -167,11 +167,11 @@
             <div><div class="t">Tarjeta de crédito o débito</div>
               <div class="s">Pago inmediato y seguro. Confirmación automática</div></div>
           </div>
-          <div class="opcion" data-metodo="TRANSFERENCIA">
+          <div class="opcion" data-metodo="TRANSFERENCIA" id="optTransferencia">
             <div><div class="t">Transferencia SPEI</div>
               <div class="s">Desde tu banca en línea. Requiere enviar comprobante</div></div>
           </div>
-          <div class="opcion" data-metodo="EFECTIVO">
+          <div class="opcion" data-metodo="EFECTIVO" id="optEfectivo">
             <div><div class="t">Efectivo al ingresar</div>
               <div class="s">Pagas en la puerta el día del evento</div></div>
           </div>
@@ -186,12 +186,12 @@
         <div class="paso">Paso 3 de 3</div>
         <h2>Ubicación</h2>
         <div class="opciones" id="tiposLugar">
-          <div class="opcion" data-tipo="MESA">
+          <div class="opcion" data-tipo="MESA" id="optMesa">
             <div><div class="t">Mesa reservada</div>
               <div class="s">Lugar asignado en una mesa específica</div></div>
             <div class="p" id="precioMesa"></div>
           </div>
-          <div class="opcion" data-tipo="GENERAL">
+          <div class="opcion" data-tipo="GENERAL" id="optGeneral">
             <div><div class="t">Lugar general</div>
               <div class="s" id="dispGenerales"></div></div>
             <div class="p" id="precioGeneral"></div>
@@ -397,7 +397,16 @@ function iniciar(datos){
   document.getElementById('tDesc').textContent = datos.descripcion;
   document.getElementById('textoAviso').textContent = datos.avisoPrivacidad || '';
 
-  if(datos.esPreventa){
+  if(datos.infoPrecios){
+    var ip = datos.infoPrecios;
+    var condiciones = [];
+    if(ip.fechaLimite) condiciones.push('hasta el '+fechaLarga(ip.fechaLimite));
+    if(ip.mesasLimite) condiciones.push('hasta agotarse '+ip.mesasLimite+' mesas vendidas (van '+ip.mesasVendidas+' de '+ip.mesasLimite+')');
+    var msg = 'Precio actual: <b>'+money(ip.precioActual)+' por persona</b>, vigente '+
+      (condiciones.length ? condiciones.join(' o ') : 'por tiempo limitado') + '.';
+    if(ip.siguientePrecio) msg += ' Después sube a '+money(ip.siguientePrecio)+'.';
+    document.getElementById('tPreventa').innerHTML = '<div class="aviso ok" style="margin-bottom:0">'+msg+'</div>';
+  } else if(datos.esPreventa){
     document.getElementById('tPreventa').innerHTML =
       '<div class="aviso ok" style="margin-bottom:0">Precio de preventa vigente hasta el '+
       fechaLarga(datos.finPreventa)+'.</div>';
@@ -409,6 +418,13 @@ function iniciar(datos){
   }
   if(!datos.mpActivo){
     document.getElementById('optTarjeta').style.display='none';
+  }
+  var metodosActivos = datos.metodosActivos || ['TARJETA','TRANSFERENCIA'];
+  if(metodosActivos.indexOf('TRANSFERENCIA')<0) document.getElementById('optTransferencia').style.display='none';
+  if(metodosActivos.indexOf('EFECTIVO')<0) document.getElementById('optEfectivo').style.display='none';
+
+  if(!datos.lugaresGeneralesActivos){
+    document.getElementById('optGeneral').style.display='none';
   }
 
   var sel = document.getElementById('personas');
@@ -474,6 +490,8 @@ function elegirMetodo(m, el){
   if(esEfectivo){
     estado.tipoLugar='GENERAL'; estado.numMesa=null;
     document.getElementById('selectorMesas').classList.add('oculto');
+  } else if(!EV.lugaresGeneralesActivos){
+    elegirTipo('MESA', document.getElementById('optMesa'));
   }
 
   var notas = {

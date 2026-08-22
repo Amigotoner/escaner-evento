@@ -39,6 +39,15 @@
     padding:11px 20px;font-size:13.5px;font-weight:650;cursor:pointer;font-family:inherit;
     margin-bottom:14px
   }
+  .cajaSubasta{
+    background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin-top:16px;text-align:left
+  }
+  .cajaSubasta p{font-size:13px;color:#334155;margin-bottom:10px;line-height:1.5}
+  .btnSubasta{
+    display:block;background:var(--tinta);color:#fff;border:0;border-radius:9px;
+    padding:12px 20px;font-size:14px;font-weight:650;cursor:pointer;font-family:inherit;
+    text-decoration:none;text-align:center
+  }
   .cargando{color:#64748b;font-size:14px}
   .oculto{display:none}
   .avisoConfig{
@@ -139,6 +148,12 @@ function mostrarPase(D){
       '<div class="dato"><span>Estatus de pago</span><span>' + D.estatusPago + '</span></div>' +
     '</div>' +
     estadoPago +
+    (D.subastaActiva
+      ? '<div class="cajaSubasta"><p>🔨 <b>Hay una subasta en vivo en este evento.</b> ' +
+        'Entra desde aquí para ver los artículos y pujar — ya quedas identificado con tu propio acceso, ' +
+        'sin necesidad de escribir tus datos otra vez.</p>' +
+        '<a class="btnSubasta" href="' + D.urlBase + '?p=subasta&t=' + encodeURIComponent(D.token) + '">Ir a pujar en la subasta</a></div>'
+      : '') +
     '<div class="nota">Este código es personal e intransferible. ' +
     'Solo permite un ingreso: al entrar recibirás una pulsera que te dejará ' +
     'salir y volver libremente durante el evento.<br><br>' +
