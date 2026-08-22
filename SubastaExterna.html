@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Subasta</title>
+<style>
+  :root{
+    --tinta:#0f172a; --suave:#64748b; --linea:#e2e8f0; --fondo:#f8fafc;
+    --acento:#0f172a; --ok:#16a34a; --alerta:#d97706; --error:#dc2626;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:var(--fuente, -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif);
+    background:var(--fondo); color:var(--tinta); line-height:1.5;
+    padding:18px 14px 60px;
+  }
+  .wrap{max-width:640px;margin:0 auto}
+  h1{font-size:24px;letter-spacing:-.02em;margin-bottom:4px}
+  .meta{color:var(--suave);font-size:14px;margin-bottom:16px}
+  .identidad{
+    background:#fff;border:1px solid var(--linea);border-radius:12px;padding:14px 16px;margin-bottom:16px
+  }
+  .identidad .t{font-size:12.5px;font-weight:700;color:var(--suave);text-transform:uppercase;
+    letter-spacing:.05em;margin-bottom:8px}
+  .identidadVerificada{
+    background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:13px 16px;margin-bottom:16px;
+    display:flex;align-items:center;gap:10px;font-size:14px;color:#166534
+  }
+  .identidadVerificada b{font-size:15.5px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  input{width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:8px;
+    font-size:15px;font-family:inherit;background:#fff;color:var(--tinta)}
+  .aviso{padding:12px 14px;border-radius:9px;font-size:13.5px;margin-bottom:16px;line-height:1.5}
+  .aviso.warn{background:#fffbeb;color:#92400e;border-left:3px solid var(--alerta)}
+  .aviso.err{background:#fef2f2;color:#991b1b;border-left:3px solid var(--error)}
+  .card{
+    background:#fff;border:1px solid var(--linea);border-radius:14px;padding:16px;margin-bottom:12px;
+    display:flex;gap:14px;transition:box-shadow .3s
+  }
+  .card.actualizado{box-shadow:0 0 0 2px var(--acento)}
+  .card.cerrado{opacity:.55}
+  .foto{
+    width:84px;height:84px;border-radius:10px;background:#e2e8f0;flex-shrink:0;
+    background-size:cover;background-position:center
+  }
+  .info{flex:1;min-width:0}
+  .nombreArt{font-weight:700;font-size:15.5px;margin-bottom:2px}
+  .descArt{font-size:12.5px;color:var(--suave);margin-bottom:8px;display:-webkit-box;
+    -webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .pujaFila{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+  .pujaActual{font-size:19px;font-weight:800;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+  .ganador{font-size:12px;color:var(--suave)}
+  .pill{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:700}
+  .pAbierto{background:#dcfce7;color:#166534}
+  .pCerrado{background:#f1f5f9;color:#64748b}
+  .pTiempo{background:#fef3c7;color:#92400e}
+  .fila{display:flex;gap:8px}
+  input.montoPuja{flex:1}
+  button{padding:10px 14px;border:0;border-radius:8px;font-size:13.5px;font-weight:650;
+    cursor:pointer;font-family:inherit;background:var(--acento);color:#fff;white-space:nowrap}
+  button:disabled{background:#94a3b8;cursor:not-allowed}
+  .msgArt{font-size:12px;margin-top:6px}
+  .msgArt.err{color:var(--error)}
+  .msgArt.ok{color:var(--ok)}
+  .cargando{text-align:center;padding:50px 20px;color:var(--suave)}
+  .oculto{display:none}
+  .avisoConfig{
+    background:#7c2d12;color:#fed7aa;padding:13px 15px;border-radius:9px;font-size:13px;
+    margin-bottom:14px;line-height:1.5
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="avisoConfig" class="avisoConfig oculto">
+    ⚠️ Falta configurar la URL del sistema en este archivo (constante <b>API_URL</b>, al inicio del
+    &lt;script&gt;).
+  </div>
+
+  <h1 id="tEvento">Subasta</h1>
+  <div class="meta">Toca "Pujar" en cualquier artículo — tu puja se registra al instante.</div>
+
+  <div id="avisoInactiva" class="aviso warn oculto">
+    La subasta todavía no está activa. Vuelve a intentarlo más tarde.
+  </div>
+
+  <div id="identidadVerificada" class="identidadVerificada oculto">
+    <span style="font-size:20px">✅</span>
+    <span>Estás pujando como <b id="miNombreVerificado"></b> — identidad verificada con tu pase.</span>
+  </div>
+
+  <div id="identidad" class="identidad oculto">
+    <div class="t">Tus datos (se guardan en este celular)</div>
+    <div class="grid2">
+      <input id="miNombre" type="text" placeholder="Tu nombre">
+      <input id="miContacto" type="text" placeholder="Teléfono o correo">
+    </div>
+  </div>
+
+  <div id="cargando" class="cargando">Cargando artículos…</div>
+  <div id="lista"></div>
+</div>
+
+<script>
+/* Pega aquí la URL de tu aplicación web de Apps Script, terminada en /exec. */
+var API_URL = 'https://script.google.com/macros/s/AKfycbx47wiWLThmArQIirAXMtA6xAytZphK8q0sQ0fnOQmCqUz5WCBwe700pizTMOp-vD2K/exec';
+
+if (!API_URL || API_URL.indexOf('PEGA_AQUI') >= 0) {
+  document.getElementById('avisoConfig').classList.remove('oculto');
+}
+
+/* Vive fuera de Apps Script (GitHub Pages) por el mismo motivo que ReservaExterna.html y
+   ScannerExterno.html: Safari/iOS no puede abrir apps web completas de Apps Script. GET,
+   no POST — un POST pierde su cuerpo al seguir la redirección 302 de las apps web. */
+function llamarApi(accion, datos){
+  var payload = Object.assign({p: 'apiPublica', accion: accion}, datos || {});
+  var qs = Object.keys(payload).map(function(k){
+    var v = payload[k];
+    if (v === undefined || v === null) v = '';
+    if (typeof v === 'object') v = JSON.stringify(v);
+    return encodeURIComponent(k) + '=' + encodeURIComponent(v);
+  }).join('&');
+  return fetch(API_URL + '?' + qs).then(function(r){
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  });
+}
+
+var ARTICULOS = [];
+var TOKEN = new URLSearchParams(window.location.search).get('t') || '';
+var VERIFICADO = false;
+
+document.getElementById('miNombre').value = localStorage.getItem('subasta_nombre') || '';
+document.getElementById('miContacto').value = localStorage.getItem('subasta_contacto') || '';
+document.getElementById('miNombre').addEventListener('input', function(){ localStorage.setItem('subasta_nombre', this.value); });
+document.getElementById('miContacto').addEventListener('input', function(){ localStorage.setItem('subasta_contacto', this.value); });
+
+function money(n){ return '$'+Number(n||0).toLocaleString('es-MX',{maximumFractionDigits:0}); }
+
+function iniciar(){
+  if(TOKEN){
+    llamarApi('identificarPujador', {token: TOKEN}).then(function(r){
+      if(r && r.ok){
+        VERIFICADO = true;
+        document.getElementById('miNombreVerificado').textContent = r.nombre;
+        document.getElementById('identidadVerificada').classList.remove('oculto');
+      } else {
+        document.getElementById('identidad').classList.remove('oculto');
+      }
+      cargar();
+    }).catch(function(){
+      document.getElementById('identidad').classList.remove('oculto');
+      cargar();
+    });
+  } else {
+    document.getElementById('identidad').classList.remove('oculto');
+    cargar();
+  }
+}
+
+function cargar(){
+  llamarApi('articulosSubasta', {}).then(function(r){
+    document.getElementById('cargando').classList.add('oculto');
+    if(!r || !r.ok) return;
+
+    document.documentElement.style.setProperty('--tinta', r.colorPrincipal);
+    document.documentElement.style.setProperty('--acento', r.colorAcento || r.colorPrincipal);
+    if(r.fuenteGoogle && !document.getElementById('fnt')){
+      var l = document.createElement('link');
+      l.id='fnt'; l.rel='stylesheet';
+      l.href='https://fonts.googleapis.com/css2?family='+encodeURIComponent(r.fuenteGoogle).replace(/%20/g,'+')+':wght@400;600;700&display=swap';
+      document.head.appendChild(l);
+      document.documentElement.style.setProperty('--fuente', "'"+r.fuenteGoogle+"', sans-serif");
+    }
+    document.getElementById('tEvento').textContent = r.nombreEvento || 'Subasta';
+    document.getElementById('avisoInactiva').classList.toggle('oculto', !!r.subastaActiva);
+
+    var anteriores = {};
+    ARTICULOS.forEach(function(a){ anteriores[a.articuloID] = a.pujaActual; });
+    ARTICULOS = r.articulos || [];
+    pintar(anteriores);
+  }).catch(function(){
+    document.getElementById('cargando').textContent = 'No pudimos cargar la subasta. Revisa tu conexión.';
+  });
+}
+
+function pintar(anteriores){
+  var c = document.getElementById('lista');
+  c.innerHTML = ARTICULOS.map(function(a){
+    var cerrado = a.estatus !== 'ABIERTO';
+    var subioAhora = anteriores[a.articuloID] !== undefined && anteriores[a.articuloID] !== a.pujaActual;
+    var foto = a.urlImagen ? 'background-image:url(\''+a.urlImagen+'\')' : '';
+    var pillEstado = cerrado ? '<span class="pill pCerrado">Vendido</span>' : '<span class="pill pAbierto">Abierto</span>';
+    var pillTiempo = (!cerrado && a.segundosRestantes > 0)
+      ? ' <span class="pill pTiempo" id="t_'+a.articuloID+'" data-seg="'+a.segundosRestantes+'">'+fmtSeg(a.segundosRestantes)+'</span>' : '';
+    return '<div class="card '+(cerrado?'cerrado':'')+(subioAhora?' actualizado':'')+'">'+
+      '<div class="foto" style="'+foto+'"></div>'+
+      '<div class="info">'+
+        '<div class="nombreArt">'+a.nombre+' '+pillEstado+pillTiempo+'</div>'+
+        (a.descripcion ? '<div class="descArt">'+a.descripcion+'</div>' : '')+
+        '<div class="pujaFila"><div class="pujaActual">'+a.pujaActualTexto+'</div>'+
+        '<div class="ganador">'+(a.ganadorNombre ? 'Va ganando: '+a.ganadorNombre+(a.ganadorVerificado?' ✓':'') : 'Sin pujas aún')+'</div></div>'+
+        (cerrado ? '' :
+          '<div class="fila">'+
+          '<input class="montoPuja" type="number" inputmode="decimal" id="monto_'+a.articuloID+'" '+
+            'placeholder="Mín. '+a.siguienteMinima+'" value="'+a.siguienteMinima+'">'+
+          '<button onclick="pujar(\''+a.articuloID+'\')">Pujar</button>'+
+          '</div>'+
+          '<div class="msgArt" id="msg_'+a.articuloID+'"></div>')+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+
+function fmtSeg(s){ var m=Math.floor(s/60), r=s%60; return '⏳ '+m+':'+(r<10?'0':'')+r; }
+
+setInterval(function(){
+  document.querySelectorAll('[id^="t_"]').forEach(function(el){
+    var seg = Number(el.dataset.seg) - 1;
+    if(seg <= 0){ cargar(); return; }
+    el.dataset.seg = seg;
+    el.textContent = fmtSeg(seg);
+  });
+}, 1000);
+
+function pujar(articuloID){
+  var nombre, contacto;
+  if(VERIFICADO){
+    nombre = document.getElementById('miNombreVerificado').textContent;
+    contacto = ''; // el servidor la toma del pase cuando hay token
+  } else {
+    nombre = document.getElementById('miNombre').value.trim();
+    contacto = document.getElementById('miContacto').value.trim();
+  }
+  var msg = document.getElementById('msg_'+articuloID);
+  msg.className = 'msgArt';
+  msg.textContent = '';
+
+  if(!VERIFICADO){
+    if(!nombre || nombre.length < 3){ msg.className='msgArt err'; msg.textContent='Escribe tu nombre arriba.'; return; }
+    if(!contacto || contacto.length < 5){ msg.className='msgArt err'; msg.textContent='Escribe tu contacto arriba.'; return; }
+  }
+
+  var monto = Number(document.getElementById('monto_'+articuloID).value);
+  if(!monto){ msg.className='msgArt err'; msg.textContent='Escribe un monto.'; return; }
+
+  llamarApi('registrarPuja', {articuloID: articuloID, nombre: nombre, contacto: contacto, monto: monto, token: TOKEN})
+    .then(function(r){
+      if(!r.ok){ msg.className='msgArt err'; msg.textContent=r.mensaje; cargar(); return; }
+      msg.className='msgArt ok'; msg.textContent='¡Vas ganando este artículo!';
+      cargar();
+    })
+    .catch(function(){
+      msg.className='msgArt err'; msg.textContent='No se pudo registrar tu puja. Intenta de nuevo.';
+    });
+}
+
+iniciar();
+setInterval(cargar, 3500);
+</script>
+</body>
+</html>

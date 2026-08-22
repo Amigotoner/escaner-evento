@@ -130,8 +130,8 @@ function mostrarPase(D){
       'Tu acceso es a lugares generales, sin mesa asignada.</div>';
   } else {
     estadoPago = '<div class="aviso warn"><b>⏳ Pago pendiente: ' + D.saldoTexto + '</b><br>' +
-      'Aún no hemos verificado tu transferencia. Si ya pagaste, reenvía tu comprobante ' +
-      'para que confirmemos tu acceso antes del evento.</div>';
+      'Aún no hemos verificado tu transferencia. En cuanto la confirmemos, este estatus ' +
+      'cambiará solo a Pagado — vuelve a abrir este link para revisarlo.</div>';
   }
 
   c.innerHTML =
@@ -152,11 +152,10 @@ function mostrarPase(D){
       ? '<div class="cajaSubasta"><p>🔨 <b>Hay una subasta en vivo en este evento.</b> ' +
         'Entra desde aquí para ver los artículos y pujar — ya quedas identificado con tu propio acceso, ' +
         'sin necesidad de escribir tus datos otra vez.</p>' +
-        '<a class="btnSubasta" href="' + D.urlBase + '?p=subasta&t=' + encodeURIComponent(D.token) + '">Ir a pujar en la subasta</a></div>'
+        '<a class="btnSubasta" href="' + D.urlSubasta + '">Ir a pujar en la subasta</a></div>'
       : '') +
-    '<div class="nota">Este código es personal e intransferible. ' +
-    'Solo permite un ingreso: al entrar recibirás una pulsera que te dejará ' +
-    'salir y volver libremente durante el evento.<br><br>' +
+    '<div class="nota">Este código es único y personal. Solo permite un ingreso por persona, ' +
+    'al entrar recibirás una pulsera que te dejará salir y volver libremente durante el evento.<br><br>' +
     'Sube el brillo de tu pantalla al momento de escanear.</div>';
 
   document.getElementById('btnDescargarQR').addEventListener('click', function(){

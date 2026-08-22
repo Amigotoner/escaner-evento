@@ -230,7 +230,9 @@
   <!-- ============ RESULTADO: TRANSFERENCIA ============ -->
   <div id="resTransferencia" class="oculto">
     <div class="card">
-      <div class="aviso ok"><b>Tu lugar quedó apartado.</b> Completa el pago para confirmarlo.</div>
+      <div class="aviso ok"><b>Tu lugar quedó apartado.</b> Una vez que realices tu pago dentro
+        de las <b id="trHoras"></b> hrs siguientes, se confirmará tu pase a Pagado. Siempre podrás
+        ver el estatus desde el link de tu correo electrónico.</div>
       <h2>Datos para tu transferencia</h2>
       <div class="copiable"><span id="trClabe"></span><button onclick="copiar('trClabe',this)">Copiar</button></div>
       <div class="dato"><span>Banco</span><span id="trBanco"></span></div>
@@ -239,28 +241,16 @@
       <div class="dato"><span>Tu reservación</span><span id="trReserva"></span></div>
 
       <div class="aviso warn">
-        <b>Dos pasos obligatorios:</b><br><br>
-        <b>1.</b> En el concepto o referencia de la transferencia escribe tu código:
+        En el concepto o referencia de la transferencia escribe tu código:
         <div class="copiable" style="margin:8px 0">
           <span id="trCodigo" style="font-size:19px;font-weight:700"></span>
           <button onclick="copiar('trCodigo',this)">Copiar</button>
         </div>
-        <b>2.</b> Reenvía tu comprobante de transferencia a:
-        <div class="copiable" style="margin:8px 0">
-          <span id="trCorreo"></span><button onclick="copiar('trCorreo',this)">Copiar</button>
-        </div>
-        El comprobante es lo que nos permite identificar tu pago. Sin él, tu acceso podría
-        aparecer como no verificado al llegar al evento.
       </div>
 
-      <div class="aviso info">
-        Tienes <b id="trHoras"></b> horas para completar el pago. Después de ese plazo tu lugar
-        se libera automáticamente.
-      </div>
-
-      <button class="cta" id="btnYaTransferi">Ya envié mi comprobante</button>
+      <button class="cta" id="btnYaTransferi">Ya realicé mi transferencia</button>
       <div id="okComprobante" class="aviso ok oculto" style="margin-top:12px">
-        Recibido. Verificaremos tu pago y te confirmaremos por correo.
+        Anotado. En cuanto confirmemos tu depósito verás el cambio a Pagado desde el link de tu correo.
       </div>
     </div>
     <div class="card">
@@ -399,12 +389,12 @@ function iniciar(datos){
 
   if(datos.infoPrecios){
     var ip = datos.infoPrecios;
+    var etiqueta = ip.esPrimerNivel ? 'PRE-VENTA' : (ip.esUltimoNivel ? 'PRECIO FINAL' : 'PRECIO REGULAR');
     var condiciones = [];
+    if(ip.mesasNivelPropio) condiciones.push((ip.esPrimerNivel?'las primeras ':'las siguientes ')+ip.mesasNivelPropio+' mesas');
     if(ip.fechaLimite) condiciones.push('hasta el '+fechaLarga(ip.fechaLimite));
-    if(ip.mesasLimite) condiciones.push('hasta agotarse '+ip.mesasLimite+' mesas vendidas (van '+ip.mesasVendidas+' de '+ip.mesasLimite+')');
-    var msg = 'Precio actual: <b>'+money(ip.precioActual)+' por persona</b>, vigente '+
+    var msg = 'Precio de '+etiqueta+': <b>'+money(ip.precioActual)+'</b> por persona. Aplicable para '+
       (condiciones.length ? condiciones.join(' o ') : 'por tiempo limitado') + '.';
-    if(ip.siguientePrecio) msg += ' Después sube a '+money(ip.siguientePrecio)+'.';
     document.getElementById('tPreventa').innerHTML = '<div class="aviso ok" style="margin-bottom:0">'+msg+'</div>';
   } else if(datos.esPreventa){
     document.getElementById('tPreventa').innerHTML =
@@ -485,7 +475,7 @@ function elegirMetodo(m, el){
   var esEfectivo = (m==='EFECTIVO');
   document.getElementById('avisoEfectivo').classList.toggle('oculto', !esEfectivo);
   document.getElementById('cardUbicacion').classList.toggle('oculto', false);
-  document.getElementById('tiposLugar').classList.toggle('oculto', esEfectivo);
+  document.getElementById('tiposLugar').classList.toggle('oculto', esEfectivo || !EV.lugaresGeneralesActivos);
 
   if(esEfectivo){
     estado.tipoLugar='GENERAL'; estado.numMesa=null;
@@ -623,7 +613,6 @@ function vistaTransferencia(r){
   document.getElementById('trMonto').textContent = money(r.datos.monto);
   document.getElementById('trReserva').textContent = r.reservaID;
   document.getElementById('trCodigo').textContent = r.datos.codigo;
-  document.getElementById('trCorreo').textContent = r.datos.correoComprobantes;
   document.getElementById('trHoras').textContent = r.datos.horasLimite;
   pintarPases('pasesTransferencia', r.reservaID);
 }
